@@ -1790,7 +1790,7 @@ class _iLocIndexer(_LocationIndexer):
         """
         Insert new row(s) or column(s) into the Series or DataFrame.
         """
-        from pandas import Series
+        from pandas import Series, DataFrame
 
         # reindex the axis to the new value
         # and set inplace
@@ -1837,8 +1837,15 @@ class _iLocIndexer(_LocationIndexer):
                     # must have conforming columns
                     if len(value) != len(self.obj.columns):
                         raise ValueError("cannot set a row with mismatched columns")
-
-                value = Series(value, index=self.obj.columns, name=indexer)
+                if len(set(self.obj.dtypes)) > 1:
+                    value = list(value)
+                    for i in range(len(self.obj.columns)):
+                        value[i] = Series(data=[value[i]], dtype=self.obj.dtypes[i])
+                    value = dict(zip(self.obj.columns, value))
+                    value = DataFrame(value)
+                    value.index = [indexer]
+                else:
+                    value = Series(value, index=self.obj.columns, name=indexer, dtype=self.obj.dtypes[0])
 
             self.obj._mgr = self.obj.append(value)._mgr
             self.obj._maybe_update_cacher(clear=True)
